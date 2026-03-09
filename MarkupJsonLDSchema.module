@@ -36,15 +36,32 @@
 
 class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule {
 
-
+    static protected array $defaults = [
+        'address_locality' => '',
+        'description' => '',
+        'address_region' => '',
+        'postcode' => '',
+        'street_address' => '',
+        'address_country' => '',
+        'organization' => '',
+        'logo' => '',
+        'telephone' => '',
+        'opening_hours' => '',
+        'latitude' => '',
+        'longitude' => '',
+        'has_map' => '',
+        'same_as' => '',
+        'search_results_page' => '',
+        'search_get_var' => '',
+    ];
     #---------------------
     # Module info
     #---------------------  
     
-    public static function getModuleInfo() {
+/*    public static function getModuleInfo() {
         return array(
             'title' => "Json-LD Schema",
-            'version' => "0.1.1",
+            'version' => "0.1.2",
             'summary' => "This module automatically generates semantically correct JSON-LD Schemas for your Processwire web pages for improved Search Engine results.",
             'author' => "Clip Magic",
             'href' => "http://www.clipmagic.com.au",
@@ -52,16 +69,16 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
             'singular' => true
             
         );
-    }
+    }*/
 
 
     #---------------------
     # Module config defaults
     #---------------------      
 
-    public static function getDefaults() {
+   /* public static function getDefaults() {
         // Organization information
-        return array(
+        return [
             "address_locality" => "",  // string - eg city
             "description" => "",       // string - short description, eg meta description
             "address_region" => "",    // string - eg state
@@ -70,31 +87,27 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
             "organization" => "",      // string - name of the business or organization
             "logo" => "",              // string - http url to the logo image
             "telephone" => "",         // string - self explanatory
-            "opening_hours" => "",     // string - eg Mo,Tu,We,Th,Fr 09:00-17:00 
+            "opening_hours" => "",     // string - eg Mo,Tu,We,Th,Fr 09:00-17:00
             "latitude" => "",          // string - geo latitude
             "longitude" => "",         // string - geo longitude
             "has_map" => "",           // string - google map url
             "same_as" => ""            // array - list of organization's social media page urls
-        );
-    }
+        ];
+    }*/
 
 
-    public static function getModuleConfigInputfields(array $data) {
+ /*   public static function getModuleConfigInputfields(array $data) {
         
         $modules = wire('modules');
-        
         $form = new InputfieldWrapper();
-
-        $defaults = self::getDefaults();
-        $data = array_merge($defaults, $data);
+        $data = array_merge(self::$defaults, $data);
         
         // Fieldset - Organization info
         $fieldset = $modules->get("InputfieldFieldset");        
         $fieldset->name = "organization_info";
         $fieldset->label = "Organization info";
         $fieldset->columnWidth = 50; 
-        $form->add($fieldset); 
-        
+        $form->add($fieldset);
 
         $f = $modules->get('InputfieldText'); 
         $f->attr('name', 'organization'); 
@@ -181,7 +194,6 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
         $f->value = $data['has_map'];
         $fieldset->add($f); 
 
-
         $f = $modules->get('InputfieldTextarea'); 
         $f->attr('name', 'same_as'); 
         $f->label = 'Social media URLs';
@@ -189,11 +201,8 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
         $f->value = $data['same_as'];
         $fieldset->add($f);
 
-        
-        
-        return $form; 
-        
-    }
+        return $form;
+    }*/
 
 
     #---------------------
@@ -201,11 +210,10 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
     #---------------------  
     public function __construct() {
         parent::__construct();
-        $this->defaults = wire('modules')->getModuleConfigData('MarkupJsonLDSchema');
+        self::$defaults = wire('modules')->getConfig($this->className);
     }
         
-    public function init() {
-
+    public function __init() {
     }
 
     public function install() {
@@ -223,55 +231,80 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
     #---------------------
     # Module functions
     #---------------------   
-   
-    public function ___render ($name = null, array $options = null, Page $page = null) {
 
-        $options = is_array($options) ? $options : array();                        
-        $data = array_merge($this->defaults,$options); 
-        
-               
-        $out = "";
-        
+    public function ___render($name = null, ?array $options = null, ?Page $page = null): string {
+
+        $options = is_array($options) ? $options : [];
+        $data = array_merge(self::$defaults, wire('modules')->getConfig($this), $options);
+
         if(is_null($page)) $page = wire('page');
-        
-         // $name is the class name         
-        if(is_null($name)) return "No schema name given";        
-        
+
+        // $name is the class name
+        if(is_null($name)) return "No schema name given";
+
         $sanitizer = wire('sanitizer');
-        
+
         // Dont confuse things by trying to put a BreadcrumbList schema on the home page
-        if ($name == 'BreadcrumbList' && $page->id == 1)
-            return;
-        
-        $name = 'JsonLD' . $sanitizer->text($name);
-        
-        if (!class_exists($name)){
-            // load the schema class & function
-            try {
-                $schemaClass = self::_autoloadClass($name);
-            } catch (WireException $e) {
-                throw new WireException( "Rats!!! Class " . $name . " could not be loaded: " .  $e->getMessage());
-            }
+        if($name == 'BreadcrumbList' && $page->id == 1) {
+            return '';
         }
-        
+
+        $className = 'JsonLD' . $sanitizer->text($name);
+        $schemaClass = $this->loadSchemaClass($className);
+
+        if(!$schemaClass) {
+            throw new WireException("Class {$className} could not be loaded");
+        }
+
+        if(!method_exists($schemaClass, 'getSchema')) {
+            $this->error("Schema class {$className} does not implement getSchema()", Notice::log);
+            throw new WireException("Class {$className} is invalid");
+        }
+
         // Get the data array as per the class schema
-        $result = $schemaClass->getSchema($data,$page);
-        if (!is_array($result)) {
-            throw new WireException("Class " . $name . " could not be loaded: " .  $e->getMessage());
+        $result = $schemaClass->getSchema($data, $page);
+        if(!is_array($result)) {
+            throw new WireException("Class {$className} did not return a schema array");
         }
 
         // Add custom arrays to the default schema data array and move it up one level to remove $data['custom']
-        if (!empty($data['custom']) && is_array($data['custom'])) {
-            foreach ($data['custom'] as $key => $value) {
+        if(!empty($data['custom']) && is_array($data['custom'])) {
+            foreach($data['custom'] as $key => $value) {
                 $result[$sanitizer->text($key)] = $value; // don't want to convert arrays to text
             }
         }
-        
-        $out = json_encode($result);
 
-        return $out;
+        return json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
+    private function loadSchemaClass(string $class): mixed
+    {
+        $short = ltrim($class, '\\');
+        $fqcn = __NAMESPACE__ . '\\' . $short;
+
+        // JsonLDWebSite -> WebSite => schemas/jsonld.WebSite.php
+        $fileKey = preg_replace('/^JsonLD/', '', $short);
+        if(!$fileKey) {
+            $this->error("Invalid schema class name: {$class}", Notice::log);
+            return false;
+        }
+
+        $schemaPath = __DIR__ . '/schemas/jsonld.' . $fileKey . '.php';
+
+        if(!is_file($schemaPath)) {
+            $this->error("Schema file not found for {$class}: {$schemaPath}", Notice::log);
+            return false;
+        }
+
+        require_once $schemaPath;
+
+        if(!class_exists($fqcn, false)) {
+            $this->error("Schema class {$fqcn} not found in {$schemaPath}", Notice::log);
+            return false;
+        }
+
+        return new $fqcn();
+    }
     #---------------------
     # Hooks
     #---------------------  
@@ -323,8 +356,6 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
         if (class_exists($short, false)) {
             return new $short();
         }
-
         return false;
     }
-
 }

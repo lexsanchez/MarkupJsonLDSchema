@@ -1,28 +1,45 @@
 <?php namespace ProcessWire;
-class JsonLDArticle extends WireData {    
+
+/**
+ * JSON-LD Article schema (schema.org/Article).
+ *
+ * Outputs an Article type with headline, dates, author, publisher (@id), and optional image.
+ * Pass module config plus optional overrides via $data.
+ *
+ * @see https://schema.org/Article
+ */
+class JsonLDArticle extends WireData {
+
     public function __construct() {
+        parent::__construct();
     }
-    
-    public static function getSchema (array $data = null, Page $page = null) {
-        // Article (news post, blog post, etc)
-        
+
+    /**
+     * Build the Article schema array.
+     *
+     * @param array<string, mixed>|null $data Config/overrides: @type, headline, description, articleBody, image (Pageimage).
+     * @param Page|null $page Page context (used for mainEntityOfPage, headline, dates, author, body).
+     * @return array<string, mixed> Schema array for json_encode.
+     */
+    public static function getSchema(?array $data = null, ?Page $page = null): array {
         $out = array();
+        $data ??= [];
+        $page ??= wire('page');
          
-        $home = wire('pages')->get(1);
+        $home = wire('pages')->get('/');
         $sanitizer = wire('sanitizer');
             
-        // for flat urls with a page field of page_url   
-        $pageURL  = !empty($page->page_url) ? $home->httpUrl . $page->page_url : $page->httpUrl; 
+        $pageURL = !empty($data['page_url']) ? $home->httpUrl . $data['page_url'] : $page->httpUrl;
         
                             
             $pageHeadline = !empty($data['headline']) ? $sanitizer->text($data['headline']) : $page->get('seo_title|headline|title');
             
-            $out["@context"]         = "http://schema.org/";
+            $out["@context"]         = "https://schema.org/";
             $out["@type"]            = !empty($data["@type"]) ? $sanitizer->text($data["@type"]) : "Article";
-            $out["mainEntityOfPage"] = array(
+            $out["mainEntityOfPage"] = [
                 "@type" => 'WebPage',
-                "@id"   => $page->httpUrl
-            );
+                "@id"   => rtrim($page->httpUrl, '/') . '/#webpage',
+            ];
             $out["headline"]         = !empty($data["headline"]) ? $sanitizer->text($data["headline"]) : $pageHeadline;
             $out["url"]              = $pageURL;
                 
@@ -33,12 +50,7 @@ class JsonLDArticle extends WireData {
                 "@type" => "Person",
                 "name" => wire('users')->get($page->created_user_id)->title
             );
-            if (!empty($data['organization'])) {
-                $out["publisher"]          = array(
-                    "@type" => "Organization",
-                    "name" => $sanitizer->text($data['organization'])
-                );                
-            }        
+            $out["publisher"] = ['@id' => rtrim($home->httpUrl, '/') . '/#organization'];        
             if (!empty($data['image'])) {
                 $out["image"]    = array(
                     "@type"  => "ImageObject",
@@ -48,9 +60,21 @@ class JsonLDArticle extends WireData {
                 );
              }
             $out['description'] = !empty($data["description"]) ? $sanitizer->text($data["description"]) : $page->get('seo_description|summary|title');
-            $out["articleBody"] = !empty($data["articleBody"]) ? $sanitizer->textarea($data["description"]) : $page->get('body|blog-body');
+            $out["articleBody"] = !empty($data["articleBody"]) ? $sanitizer->textarea($data["articleBody"]) : $page->get('body|blog-body');
          
-         $out = array_filter($out);   
-         return $out;
+        // Add custom properties
+        if (!empty($data['custom']) && is_array($data['custom'])) {
+            foreach ($data['custom'] as $key => $value) {
+                $cleanKey = $sanitizer->text((string) $key);
+                $cleanVal = $sanitizer->text((string) $value);
+
+                if ($cleanKey !== '' && $cleanVal !== '' && !isset($out[$cleanKey])) {
+                    $out[$cleanKey] = $cleanVal;
+                }
+            }
+        }
+
+        $out = array_filter($out);
+        return $out;
     }
 }
