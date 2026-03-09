@@ -1,4 +1,4 @@
-# MarkupJsonLDSchema Module v0.1.2
+# MarkupJsonLDSchema Module v0.1.3
 
 ## General information
 
