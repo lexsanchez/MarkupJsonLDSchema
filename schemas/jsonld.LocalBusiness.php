@@ -73,6 +73,24 @@ class JsonLDLocalBusiness extends WireData {
             }
         }
 
+        if (!empty($data['image'])) {
+            if (is_object($data['image']) && !empty($data['image']->httpUrl)) {
+                $out['image'] = [
+                    '@type' => 'ImageObject',
+                    'url'   => $sanitizer->url($data['image']->httpUrl),
+                ];
+                if (!empty($data['image']->width)) {
+                    $out['image']['width'] = $sanitizer->text($data['image']->width);
+                }
+                if (!empty($data['image']->height)) {
+                    $out['image']['height'] = $sanitizer->text($data['image']->height);
+                }
+            } else {
+                $out['image'] = $sanitizer->url($data['image']);
+            }
+        }
+
+
         $out = array_filter($out);
         return $out;
     }
