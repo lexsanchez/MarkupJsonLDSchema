@@ -47,7 +47,7 @@ class JsonLDLocalBusiness extends WireData {
             );
         }
         if (!empty($data['has_map'])) {
-            $out['geo']['hasMap'] = $sanitizer->url($data['has_map']);
+            $out['hasMap'] = $sanitizer->url($data['has_map']);
         }
 
         $sameAs = [];
