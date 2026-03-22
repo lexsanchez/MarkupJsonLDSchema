@@ -31,11 +31,17 @@ class JsonLDLocalBusiness extends WireData {
         $out["@context"]         = "https://schema.org/";
         $out["@type"]            = !empty($data["@type"]) ? $sanitizer->text($data["@type"]) : "LocalBusiness";
         $out['name']             = $sanitizer->text($data['organization']);
-        $out['streetAddress']    = $sanitizer->text($data['street_address']);
-        $out['addressLocality']  = $sanitizer->text($data['address_locality']);
-        $out['addressRegion']    = $sanitizer->text($data['address_region']);
-        $out['postalCode']       = $sanitizer->text($data['postcode']);
-        $out['addressCountry']   = $sanitizer->text($data['address_country']);
+        $address = array_filter([
+            'streetAddress'   => $sanitizer->text($data['street_address'] ?? ''),
+            'addressLocality' => $sanitizer->text($data['address_locality'] ?? ''),
+            'addressRegion'   => $sanitizer->text($data['address_region'] ?? ''),
+            'postalCode'      => $sanitizer->text($data['postcode'] ?? ''),
+            'addressCountry'  => $sanitizer->text($data['address_country'] ?? ''),
+        ]);
+
+        if (!empty($address)) {
+            $out['address'] = array_merge(['@type' => 'PostalAddress'], $address);
+        }
         $out['description']      = !empty($data['description']) ? $sanitizer->text($data['description']) : $sanitizer->text($seo_description);
         $out['telephone']        = $sanitizer->text($data['telephone']);
         $out['openingHours']     = $sanitizer->text($data['opening_hours']);
