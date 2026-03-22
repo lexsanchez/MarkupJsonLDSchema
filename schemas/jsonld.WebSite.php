@@ -31,7 +31,7 @@ class JsonLDWebSite extends WireData {
         $pageURL = !empty($data['page_url']) ? $home->httpUrl . $data['page_url'] : $page->httpUrl;
         
         // Website home page info
-        $out["@context"] = "https://schema.org";
+        $out["@context"] = "https://schema.org/";
         $out["@type"]    = !empty($data["@type"])? $sanitizer->text($data["@type"]) : "WebSite";
         $out["url"]       = $pageURL;
         $out["name"]      = !empty($data["name"]) ? $sanitizer->text($data["name"]) : $home->get('seo_title|headline|title');

@@ -28,7 +28,7 @@ class JsonLDEvent extends WireData {
         $home = wire('pages')->get('/');
         $sanitizer = wire('sanitizer');
 
-        $out["@context"]    = "https://schema.org";
+        $out["@context"]    = "https://schema.org/";
         $out["@type"]       = !empty($data["@type"]) ? $sanitizer->text($data["@type"]) : "Event";
         $out["organizer"]   = ['@id' => rtrim($home->httpUrl, '/') . '/#organization'];
         $out["name"]        = !empty($data['name']) ? $sanitizer->text($data['name']) : $page->get('seo_title|title|headline');

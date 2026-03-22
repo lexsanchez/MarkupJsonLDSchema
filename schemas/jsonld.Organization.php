@@ -27,7 +27,7 @@ class JsonLDOrganization extends WireData {
         $sanitizer = wire('sanitizer');
 
         $out = [];
-        $out['@context'] = 'https://schema.org';
+        $out['@context'] = 'https://schema.org/';
         $out['@type'] = !empty($data['@type']) ? $sanitizer->text($data['@type']) : 'Organization';
         $out['@id'] = rtrim($home->httpUrl, '/') . '/#organization';
 

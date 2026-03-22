@@ -29,7 +29,7 @@ class JsonLDPerson extends WireData {
         $sanitizer = wire('sanitizer');
 
         $out = [];
-        $out['@context'] = 'https://schema.org';
+        $out['@context'] = 'https://schema.org/';
         $out['@type'] = !empty($data['@type']) ? $sanitizer->text($data['@type']) : 'Person';
 
         if (!empty($data['@id'])) {

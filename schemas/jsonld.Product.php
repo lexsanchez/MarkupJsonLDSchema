@@ -29,7 +29,7 @@ class JsonLDProduct extends WireData {
         $home = wire('pages')->get('/');
         $sanitizer = wire('sanitizer');
 
-        $out["@context"]    = "https://schema.org";
+        $out["@context"]    = "https://schema.org/";
         $out["@type"]       = !empty($data["@type"]) ? $sanitizer->text($data["@type"]) : "Product";
         $out["publisher"]   = ['@id' => rtrim($home->httpUrl, '/') . '/#organization'];
         $out["brand"]       = !empty($data['brand']) ? $sanitizer->text($data['brand']) : $page->get('brand|manufacturer|title');

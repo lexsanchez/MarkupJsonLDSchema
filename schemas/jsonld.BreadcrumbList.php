@@ -51,7 +51,7 @@ class JsonLDBreadcrumbList extends WireData {
                 $positionCounter++;
             }
 
-            $out['@context'] = 'https://schema.org';
+            $out['@context'] = 'https://schema.org/';
             $out['@type'] = 'BreadcrumbList';
             $out['itemListElement'] = $listItems;
         }

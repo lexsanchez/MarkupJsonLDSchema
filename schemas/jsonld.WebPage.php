@@ -28,7 +28,7 @@ class JsonLDWebPage extends WireData {
             
         $pageURL = !empty($data['page_url']) ? $home->httpUrl . $data['page_url'] : $page->httpUrl;
                       
-        $out["@context"]    = "https://schema.org";
+        $out["@context"]    = "https://schema.org/";
         $out["@type"]       = !empty($data["@type"]) ? $sanitizer->text($data["@type"]) : "WebPage";
         $out["url"]         = $pageURL;
         $out["name"]        = !empty($data['name']) ? $sanitizer->text($data['name']) : $page->get('seo_title|title|headline');
