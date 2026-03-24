@@ -1,3 +1,6 @@
+v0.1.4 - 2026-03-24
+- improve schemas
+
 v0.1.3 - 2026-03-09
 - Added optional $data['custom'] key/value pairs for extending schema output
 - Custom fields are sanitized as text and appended to schema output

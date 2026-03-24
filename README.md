@@ -1,4 +1,4 @@
-# MarkupJsonLDSchema Module v0.1.3
+# MarkupJsonLDSchema Module v0.1.4
 
 ## General information
 
@@ -383,6 +383,7 @@ echo $jsonld->render('FAQPage');
 
 ## Change log
 
+2026‑03‑24 – Improve schemas (v0.1.4)  
 2026‑03‑09 – Refactor module structure, improved schema loader, configurable search settings added, new schemas added (v0.1.3)  
 2025‑09‑29 – Added ProcessWire namespace & PHP 8.2 compatibility (v0.1.1)  
 2016‑06‑19 – Initial release (v0.0.2)
