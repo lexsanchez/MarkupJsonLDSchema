@@ -42,6 +42,7 @@ class JsonLDLocalBusiness extends WireData {
         if (!empty($address)) {
             $out['address'] = array_merge(['@type' => 'PostalAddress'], $address);
         }
+
         $out['description']      = !empty($data['description']) ? $sanitizer->text($data['description']) : $sanitizer->text($seo_description);
         $out['telephone']        = $sanitizer->text($data['telephone']);
         $out['openingHours']     = $sanitizer->text($data['opening_hours']);
