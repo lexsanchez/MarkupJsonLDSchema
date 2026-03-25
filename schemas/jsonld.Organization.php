@@ -95,10 +95,10 @@ class JsonLDOrganization extends WireData {
                     'url'   => $sanitizer->url($data['image']->httpUrl),
                 ];
                 if (!empty($data['image']->width)) {
-                    $out['image']['width'] = $sanitizer->text($data['image']->width);
+                    $out['image']['width'] = $sanitizer->int($data['image']->width);
                 }
                 if (!empty($data['image']->height)) {
-                    $out['image']['height'] = $sanitizer->text($data['image']->height);
+                    $out['image']['height'] = $sanitizer->int($data['image']->height);
                 }
             } else {
                 $out['image'] = $sanitizer->url($data['image']);
