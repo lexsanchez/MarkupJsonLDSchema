@@ -53,17 +53,6 @@ class JsonLDProduct extends WireData {
             );
          }
 
-        // Add custom properties
-        if (!empty($data['custom']) && is_array($data['custom'])) {
-            foreach ($data['custom'] as $key => $value) {
-                $cleanKey = $sanitizer->text((string) $key);
-                $cleanVal = $sanitizer->text((string) $value);
-
-                if ($cleanKey !== '' && $cleanVal !== '' && !isset($out[$cleanKey])) {
-                    $out[$cleanKey] = $cleanVal;
-                }
-            }
-        }
 
         $out = array_filter($out);
         return $out;

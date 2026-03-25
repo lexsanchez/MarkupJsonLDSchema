@@ -56,18 +56,6 @@ class JsonLDBreadcrumbList extends WireData {
             $out['itemListElement'] = $listItems;
         }
 
-        // Add custom properties
-        if (!empty($data['custom']) && is_array($data['custom'])) {
-            foreach ($data['custom'] as $key => $value) {
-                $cleanKey = $sanitizer->text((string) $key);
-                $cleanVal = $sanitizer->text((string) $value);
-
-                if ($cleanKey !== '' && $cleanVal !== '' && !isset($out[$cleanKey])) {
-                    $out[$cleanKey] = $cleanVal;
-                }
-            }
-        }
-
         return array_filter($out);
     }}
 ?>

@@ -31,17 +31,12 @@ class JsonLDLocalBusiness extends WireData {
         $out["@context"]         = "https://schema.org/";
         $out["@type"]            = !empty($data["@type"]) ? $sanitizer->text($data["@type"]) : "LocalBusiness";
         $out['name']             = $sanitizer->text($data['organization']);
-        $address = array_filter([
-            'streetAddress'   => $sanitizer->text($data['street_address'] ?? ''),
-            'addressLocality' => $sanitizer->text($data['address_locality'] ?? ''),
-            'addressRegion'   => $sanitizer->text($data['address_region'] ?? ''),
-            'postalCode'      => $sanitizer->text($data['postcode'] ?? ''),
-            'addressCountry'  => $sanitizer->text($data['address_country'] ?? ''),
-        ]);
 
-        if (!empty($address)) {
-            $out['address'] = array_merge(['@type' => 'PostalAddress'], $address);
-        }
+        $out['streetAddress']   = $sanitizer->text($data['street_address'] ?? '');
+        $out['addressLocality'] = $sanitizer->text($data['address_locality'] ?? '');
+        $out['addressRegion']   = $sanitizer->text($data['address_region'] ?? '');
+        $out['postalCode']      = $sanitizer->text($data['postcode'] ?? '');
+        $out['addressCountry']  = $sanitizer->text($data['address_country'] ?? '');
 
         $out['description']      = !empty($data['description']) ? $sanitizer->text($data['description']) : $sanitizer->text($seo_description);
         $out['telephone']        = $sanitizer->text($data['telephone']);
@@ -68,17 +63,6 @@ class JsonLDLocalBusiness extends WireData {
         if (!empty($sameAs)) {
             $out['sameAs'] = $sameAs;
         }
-        // Add custom properties
-        if (!empty($data['custom']) && is_array($data['custom'])) {
-            foreach ($data['custom'] as $key => $value) {
-                $cleanKey = $sanitizer->text((string) $key);
-                $cleanVal = $sanitizer->text((string) $value);
-
-                if ($cleanKey !== '' && $cleanVal !== '' && !isset($out[$cleanKey])) {
-                    $out[$cleanKey] = $cleanVal;
-                }
-            }
-        }
 
         if (!empty($data['image'])) {
             if (is_object($data['image']) && !empty($data['image']->httpUrl)) {
@@ -96,7 +80,6 @@ class JsonLDLocalBusiness extends WireData {
                 $out['image'] = $sanitizer->url($data['image']);
             }
         }
-
 
         $out = array_filter($out);
         return $out;

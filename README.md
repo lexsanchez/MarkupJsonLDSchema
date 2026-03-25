@@ -1,4 +1,4 @@
-# MarkupJsonLDSchema Module v0.1.4
+# MarkupJsonLDSchema Module
 
 ## General information
 
@@ -257,9 +257,34 @@ Outputs an `Organization` schema using the module configuration as the primary d
 
 ### Person
 
-`Person` is primarily driven by the `$options` array. The module config is still used where appropriate for shared values such as `organization`, `telephone`, `logo`, `same_as`, and address fields.
+The `Person` schema is primarily driven by the `$options` array.
 
-If you pass `worksFor` as an array, it should be an organization-like structure. The schema sanitizes common nested values such as `@id`, `url`, `sameAs`, and `address`.
+The module config may still provide shared defaults such as `organization`, though **personal contact and identity fields are not inherited automatically**. These must be explicitly passed when rendering the schema.
+
+If you pass `worksFor` as an array, it should follow an `Organization`-like structure. The schema supports nested values such as `@id`, `url`, and `sameAs`.
+
+#### Important
+
+The following fields are **only included when explicitly provided in `$options`**:
+
+- `email`
+- `telephone`
+- `same_as`
+- `street_address`
+- `address_locality`
+- `address_region`
+- `postcode`
+- `address_country`
+- `image`
+- `logo`
+
+This prevents business-level defaults such as company phone, address, or social links from being incorrectly applied to a person.
+
+Address fields are optional and processed individually. Only the values provided will be included in the final `PostalAddress`.
+
+---
+
+### Example
 
 ```php
 <?php
@@ -269,6 +294,13 @@ $options = [
     'name' => 'Jane Doe',
     'jobTitle' => 'Founder',
     'email' => 'jane@example.com',
+    'same_as' => [
+        'https://www.linkedin.com/in/janedoe/',
+        'https://github.com/janedoe',
+    ],
+    'address_locality' => 'Sydney',
+    'address_region' => 'NSW',
+
     'worksFor' => [
         '@type' => 'Organization',
         '@id' => 'https://example.com/#organization',
@@ -278,15 +310,9 @@ $options = [
             'https://linkedin.com/company/acme',
             'https://github.com/acme',
         ],
-        'address' => [
-            '@type' => 'PostalAddress',
-            'streetAddress' => '123 Main St',
-            'addressLocality' => 'Sydney',
-            'addressRegion' => 'NSW',
-            'postalCode' => '2000',
-            'addressCountry' => 'AU',
-        ],
     ],
+    'description' => 'Founder of Acme Studio and specialist in ...',
+    'url' => $page->httpUrl,
 ];
 ?>
 
@@ -294,8 +320,6 @@ $options = [
 <?= $jsonld->render('Person', $options); ?>
 </script>
 ```
-
----
 
 ### Product
 
@@ -381,9 +405,3 @@ echo $jsonld->render('FAQPage');
 
 ---
 
-## Change log
-
-2026‑03‑24 – Improve schemas (v0.1.4)  
-2026‑03‑09 – Refactor module structure, improved schema loader, configurable search settings added, new schemas added (v0.1.3)  
-2025‑09‑29 – Added ProcessWire namespace & PHP 8.2 compatibility (v0.1.1)  
-2016‑06‑19 – Initial release (v0.0.2)

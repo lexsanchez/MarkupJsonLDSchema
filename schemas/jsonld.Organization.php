@@ -56,16 +56,11 @@ class JsonLDOrganization extends WireData {
             }
         }
 
-        $addressParts = array_filter([
-            'streetAddress'   => $sanitizer->text($data['street_address'] ?? ''),
-            'addressLocality' => $sanitizer->text($data['address_locality'] ?? ''),
-            'addressRegion'   => $sanitizer->text($data['address_region'] ?? ''),
-            'postalCode'      => $sanitizer->text($data['postcode'] ?? ''),
-            'addressCountry'  => $sanitizer->text($data['address_country'] ?? ''),
-        ]);
-        if (!empty($addressParts)) {
-            $out['address'] = array_merge(['@type' => 'PostalAddress'], $addressParts);
-        }
+        $out['streetAddress']   = $sanitizer->text($data['street_address'] ?? '');
+        $out['addressLocality'] = $sanitizer->text($data['address_locality'] ?? '');
+        $out['addressRegion']   = $sanitizer->text($data['address_region'] ?? '');
+        $out['postalCode']      = $sanitizer->text($data['postcode'] ?? '');
+        $out['addressCountry']  = $sanitizer->text($data['address_country'] ?? '');
 
         if (!empty($data['telephone'])) {
             $out['telephone'] = $sanitizer->text($data['telephone']);
@@ -92,16 +87,6 @@ class JsonLDOrganization extends WireData {
             $out['hasMap'] = $sanitizer->url($data['has_map']);
         }
 
-        if (!empty($data['custom']) && is_array($data['custom'])) {
-            foreach ($data['custom'] as $key => $value) {
-                $cleanKey = $sanitizer->text((string) $key);
-                $cleanVal = $sanitizer->text((string) $value);
-
-                if ($cleanKey !== '' && $cleanVal !== '') {
-                    $out[$cleanKey] = $cleanVal;
-                }
-            }
-        }
 
         if (!empty($data['image'])) {
             if (is_object($data['image']) && !empty($data['image']->httpUrl)) {
@@ -119,7 +104,6 @@ class JsonLDOrganization extends WireData {
                 $out['image'] = $sanitizer->url($data['image']);
             }
         }
-
 
         return array_filter($out);
     }

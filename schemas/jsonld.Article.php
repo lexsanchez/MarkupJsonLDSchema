@@ -61,18 +61,6 @@ class JsonLDArticle extends WireData {
              }
             $out['description'] = !empty($data["description"]) ? $sanitizer->text($data["description"]) : $page->get('seo_description|summary|title');
             $out["articleBody"] = !empty($data["articleBody"]) ? $sanitizer->textarea($data["articleBody"]) : $page->get('body|blog-body');
-         
-        // Add custom properties
-        if (!empty($data['custom']) && is_array($data['custom'])) {
-            foreach ($data['custom'] as $key => $value) {
-                $cleanKey = $sanitizer->text((string) $key);
-                $cleanVal = $sanitizer->text((string) $value);
-
-                if ($cleanKey !== '' && $cleanVal !== '' && !isset($out[$cleanKey])) {
-                    $out[$cleanKey] = $cleanVal;
-                }
-            }
-        }
 
         $out = array_filter($out);
         return $out;

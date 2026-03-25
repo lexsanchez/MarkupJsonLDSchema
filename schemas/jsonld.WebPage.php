@@ -26,24 +26,8 @@ class JsonLDWebPage extends WireData {
         $home = wire('pages')->get('/');
         $sanitizer = wire('sanitizer');
             
- //       $pageURL = !empty($data['page_url']) ? $home->httpUrl . $data['page_url'] : $page->httpUrl;
-
-        $pageURL = $page->httpUrl;
-
-        if (!empty($data['page_url'])) {
-            $url = trim($data['page_url']);
-
-            // Absolute URL? Use as-is
-            if (preg_match('~^https?://~i', $url)) {
-                $pageURL = $url;
-
-            } else {
-                // Relative path → safely join with homepage
-                $pageURL = rtrim($home->httpUrl, '/') . '/' . ltrim($url, '/');
-            }
-        }
-
-
+        $pageURL = !empty($data['page_url']) ? $home->httpUrl . $data['page_url'] : $page->httpUrl;
+                      
         $out["@context"]    = "https://schema.org/";
         $out["@type"]       = !empty($data["@type"]) ? $sanitizer->text($data["@type"]) : "WebPage";
         $out["url"]         = $pageURL;
@@ -68,18 +52,6 @@ class JsonLDWebPage extends WireData {
                 'target' => rtrim($home->httpUrl, '/') . $searchPage . '?' . $searchVar . '={search_term_string}',
                 'query-input' => 'required name=search_term_string',
             ];
-        }
-
-        // Add custom properties
-        if (!empty($data['custom']) && is_array($data['custom'])) {
-            foreach ($data['custom'] as $key => $value) {
-                $cleanKey = $sanitizer->text((string) $key);
-                $cleanVal = $sanitizer->text((string) $value);
-
-                if ($cleanKey !== '' && $cleanVal !== '' && !isset($out[$cleanKey])) {
-                    $out[$cleanKey] = $cleanVal;
-                }
-            }
         }
 
         $out = array_filter($out);
