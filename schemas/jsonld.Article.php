@@ -42,25 +42,61 @@ class JsonLDArticle extends WireData {
             ];
             $out["headline"]         = !empty($data["headline"]) ? $sanitizer->text($data["headline"]) : $pageHeadline;
             $out["url"]              = $pageURL;
-                
-            
+
             $out["datePublished"]   = date('c', $page->created);
             $out["dateModified"]    = date('c', $page->modified);
-            $out["author"]          = array(
-                "@type" => "Person",
-                "name" => wire('users')->get($page->created_user_id)->title
-            );
+
+
+        if (!empty($data['author']) && is_array($data['author'])) {
+            $out['author'] = $data['author'];
+        } else {
+            $modules = wire('modules');
+            if($modules->isInstalled('ProcessBlog')) {
+                $blogConfigs = $modules->getConfig('ProcessBlog');
+                $pages = wire('pages');
+
+                $authorsPageID = $sanitizer->int($blogConfigs['blog-authors']);
+                $authorsPage = $pages->get($authorsPageID);
+                $authorPage = $pages->get($page->created_user_id);
+                bd($authorsPage);
+
+                if (!$authorsPage instanceof NullPage && !$authorPage instanceof NullPage) {
+                    $authorSlug = $sanitizer->pageName($authorPage->title);
+                    $out['author'] = [
+                        '@type' => 'Person',
+                        '@id' => rtrim($authorsPage->httpUrl, '/') . "/$authorSlug" .  '/#person',
+                        'name' => $authorPage->title,
+                    ];
+                }
+            }
+        }
+
+
             $out["publisher"] = ['@id' => rtrim($home->httpUrl, '/') . '/#organization'];        
             if (!empty($data['image'])) {
                 $out["image"]    = array(
                     "@type"  => "ImageObject",
                     "url"    => $sanitizer->url($data['image']->httpUrl),
-                    "height" => $sanitizer->text($data['image']->height),
-                    "width"  => $sanitizer->text($data['image']->width)
+                    "height" => $sanitizer->int($data['image']->height),
+                    "width"  => $sanitizer->int($data['image']->width)
                 );
              }
-            $out['description'] = !empty($data["description"]) ? $sanitizer->text($data["description"]) : $page->get('seo_description|summary|title');
-            $out["articleBody"] = !empty($data["articleBody"]) ? $sanitizer->textarea($data["articleBody"]) : $page->get('body|blog-body');
+
+            $textTools = new wireTextTools();
+            $body = !empty($data["articleBody"]) ? $data["articleBody"] : $page->get('blog_body|body');
+            $body = $textTools->markupToText((string) $body);
+            $body = preg_replace('/\h+/u', ' ', $body);      // collapse horizontal whitespace
+            $body = preg_replace("/\n{3,}/", "\n\n", $body); // limit excessive blank lines
+            $body = trim($body);
+
+            $description = !empty($data["articleBody"]) ? $data["description"] : $page->get('blog_summary|seo_description|summary|title');
+            $description = $textTools->markupToText((string) $body);
+            $description = preg_replace('/\h+/u', ' ', $body);      // collapse horizontal whitespace
+            $description = preg_replace("/\n{3,}/", "\n\n", $body); // limit excessive blank lines
+            $description = trim($description);
+            
+            $out['description'] = $description;
+            $out["articleBody"] = $body;
 
         $out = array_filter($out);
         return $out;
