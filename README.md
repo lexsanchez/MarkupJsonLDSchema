@@ -320,6 +320,7 @@ $options = [
 <?= $jsonld->render('Person', $options); ?>
 </script>
 ```
+---
 
 ### Product
 
