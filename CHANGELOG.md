@@ -1,9 +1,12 @@
+v0.1.6 2026-03-31
+Change opening times to textarea
+
 v0.1.5 - 2026-03-25
-improved handling of nested arrays in $data['custom']
-removed sanitizing $data['custom'] from schemas - all done in the module
+Improved handling of nested arrays in $data['custom']
+Removed sanitizing $data['custom'] from schemas - all done in the module
 
 v0.1.4 - 2026-03-24
-improve schemas
+Improve schemas
 
 v0.1.3 - 2026-03-09
 Added optional $data['custom'] key/value pairs for extending schema output

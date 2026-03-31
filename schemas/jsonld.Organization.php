@@ -66,7 +66,9 @@ class JsonLDOrganization extends WireData {
             $out['telephone'] = $sanitizer->text($data['telephone']);
         }
         if (!empty($data['opening_hours'])) {
-            $out['openingHours'] = $sanitizer->text($data['opening_hours']);
+            $out['openingHours'] = array_values(array_filter(
+                array_map('trim', explode("\n", $data['openingHours']))
+            ));
         }
 
         if (!empty($data['same_as'])) {
