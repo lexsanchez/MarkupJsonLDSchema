@@ -364,7 +364,9 @@ $options = [
 
 ### Product
 
-Outputs a `Product` schema for the current page. Defaults come from page fields for brand, name, and description, while the publisher points to the configured organization. Optional overrides include `brand`, `name`, `description`, `image`, `rating_value`, and `review_count`.
+Outputs a `Product` schema for the current page. Defaults come from page fields for brand, name, and description, while the publisher points to the configured organization. Optional overrides include `brand`, `name`, `description`, `image`, `rating_value`, `review_count`, `offers`, `price`, and `priceCurrency`.
+
+`offers` may be a single `Offer` array or a list of `Offer` arrays. Common supported offer keys are `@type`, `url`, `price`, `priceCurrency`, `availability`, `itemCondition`, `priceValidUntil`, and `seller`. For simple products, passing `price` and optional `priceCurrency` creates one `Offer` using the current page URL.
 
 ---
 
@@ -445,4 +447,3 @@ echo $jsonld->render('FAQPage');
 ```
 
 ---
-

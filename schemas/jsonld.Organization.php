@@ -46,10 +46,10 @@ class JsonLDOrganization extends WireData {
                     'url'   => $sanitizer->url($data['logo']->httpUrl),
                 ];
                 if (!empty($data['logo']->width)) {
-                    $out['logo']['width'] = $sanitizer->text($data['logo']->width);
+                    $out['logo']['width'] = $sanitizer->int($data['logo']->width);
                 }
                 if (!empty($data['logo']->height)) {
-                    $out['logo']['height'] = $sanitizer->text($data['logo']->height);
+                    $out['logo']['height'] = $sanitizer->int($data['logo']->height);
                 }
             } else {
                 $out['logo'] = $sanitizer->url($data['logo']);
@@ -66,9 +66,7 @@ class JsonLDOrganization extends WireData {
             $out['telephone'] = $sanitizer->text($data['telephone']);
         }
         if (!empty($data['opening_hours'])) {
-            $out['openingHours'] = array_values(array_filter(
-                array_map('trim', explode("\n", $data['openingHours']))
-            ));
+            $out['openingHours'] = $sanitizer->text($data['opening_hours']);
         }
 
         if (!empty($data['same_as'])) {
@@ -91,22 +89,56 @@ class JsonLDOrganization extends WireData {
 
 
         if (!empty($data['image'])) {
-            if (is_object($data['image']) && !empty($data['image']->httpUrl)) {
-                $out['image'] = [
-                    '@type' => 'ImageObject',
-                    'url'   => $sanitizer->url($data['image']->httpUrl),
-                ];
-                if (!empty($data['image']->width)) {
-                    $out['image']['width'] = $sanitizer->int($data['image']->width);
-                }
-                if (!empty($data['image']->height)) {
-                    $out['image']['height'] = $sanitizer->int($data['image']->height);
-                }
-            } else {
-                $out['image'] = $sanitizer->url($data['image']);
+            $image = self::sanitizeImageValue($data['image'], $sanitizer);
+            if (!empty($image)) {
+                $out['image'] = $image;
             }
         }
 
         return array_filter($out);
+    }
+
+    protected static function sanitizeImageValue(mixed $image, Sanitizer $sanitizer): mixed
+    {
+        if (is_array($image) || $image instanceof \Traversable) {
+            $images = [];
+
+            foreach ($image as $item) {
+                $clean = self::sanitizeSingleImageValue($item, $sanitizer);
+                if (!empty($clean)) {
+                    $images[] = $clean;
+                }
+            }
+
+            return $images;
+        }
+
+        return self::sanitizeSingleImageValue($image, $sanitizer);
+    }
+
+    protected static function sanitizeSingleImageValue(mixed $image, Sanitizer $sanitizer): mixed
+    {
+        if (is_object($image) && !empty($image->httpUrl)) {
+            $out = [
+                '@type' => 'ImageObject',
+                'url'   => $sanitizer->url($image->httpUrl),
+            ];
+
+            if (!empty($image->width)) {
+                $out['width'] = $sanitizer->int($image->width);
+            }
+
+            if (!empty($image->height)) {
+                $out['height'] = $sanitizer->int($image->height);
+            }
+
+            return array_filter($out);
+        }
+
+        if (is_scalar($image)) {
+            return $sanitizer->url((string) $image);
+        }
+
+        return null;
     }
 }

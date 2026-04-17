@@ -41,11 +41,13 @@ class JsonLDLocalBusiness extends WireData {
         $out['description']      = !empty($data['description']) ? $sanitizer->text($data['description']) : $sanitizer->text($seo_description);
         $out['telephone']        = $sanitizer->text($data['telephone']);
 
-        if (!empty($data['opening_hours'])) {
-            $out['openingHours'] = array_values(array_filter(
-                array_map('trim', explode("\n", $data['openingHours']))
-            ));
-        }
+
+        if(!empty($data['opening_hours']))
+            if(is_string($data['opening_hours'])) {
+                $out['openingHours'] = $sanitizer->textarea($data['opening_hours']);
+            }  else if(is_array($data['opening_hours'])) {
+                $out['openingHours'] = $data['opening_hours'];
+            }
 
 
         if (!empty($data['latitude']) || !empty($data['longitude'])) {
@@ -72,23 +74,57 @@ class JsonLDLocalBusiness extends WireData {
         }
 
         if (!empty($data['image'])) {
-            if (is_object($data['image']) && !empty($data['image']->httpUrl)) {
-                $out['image'] = [
-                    '@type' => 'ImageObject',
-                    'url'   => $sanitizer->url($data['image']->httpUrl),
-                ];
-                if (!empty($data['image']->width)) {
-                    $out['image']['width'] = $sanitizer->int($data['image']->width);
-                }
-                if (!empty($data['image']->height)) {
-                    $out['image']['height'] = $sanitizer->int($data['image']->height);
-                }
-            } else {
-                $out['image'] = $sanitizer->url($data['image']);
+            $image = self::sanitizeImageValue($data['image'], $sanitizer);
+            if (!empty($image)) {
+                $out['image'] = $image;
             }
         }
 
         $out = array_filter($out);
         return $out;
+    }
+
+    protected static function sanitizeImageValue(mixed $image, Sanitizer $sanitizer): mixed
+    {
+        if (is_array($image) || $image instanceof \Traversable) {
+            $images = [];
+
+            foreach ($image as $item) {
+                $clean = self::sanitizeSingleImageValue($item, $sanitizer);
+                if (!empty($clean)) {
+                    $images[] = $clean;
+                }
+            }
+
+            return $images;
+        }
+
+        return self::sanitizeSingleImageValue($image, $sanitizer);
+    }
+
+    protected static function sanitizeSingleImageValue(mixed $image, Sanitizer $sanitizer): mixed
+    {
+        if (is_object($image) && !empty($image->httpUrl)) {
+            $out = [
+                '@type' => 'ImageObject',
+                'url'   => $sanitizer->url($image->httpUrl),
+            ];
+
+            if (!empty($image->width)) {
+                $out['width'] = $sanitizer->int($image->width);
+            }
+
+            if (!empty($image->height)) {
+                $out['height'] = $sanitizer->int($image->height);
+            }
+
+            return array_filter($out);
+        }
+
+        if (is_scalar($image)) {
+            return $sanitizer->url((string) $image);
+        }
+
+        return null;
     }
 }
