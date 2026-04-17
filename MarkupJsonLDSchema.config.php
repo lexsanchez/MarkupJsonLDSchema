@@ -87,7 +87,7 @@ $config = [
             ],
 
             'opening_hours' => [
-                'type' => 'text',
+                'type' => 'textarea',
                 'label' => __('Opening hours'),
                 'value' => '',
                 'stripTags' => 1,
