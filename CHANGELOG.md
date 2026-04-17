@@ -1,3 +1,6 @@
+v0.1.7 2026-04-16
+adds a **Setup → Json-LD Schema** page that allows non-superuser
+
 v0.1.6 2026-03-31
 Change opening times to textarea
 
