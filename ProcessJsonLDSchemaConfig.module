@@ -20,8 +20,14 @@ class ProcessJsonLDSchemaConfig extends Process {
                     $newConfig[$name] = $form->getChildByName($name)->val();
                 }
             }
+            // Save template mappings
+            $newConfig['template_mappings'] = $this->processTemplateMappings($input->post);
             $modules->saveConfig($targetModule, $newConfig);
             $this->message($this->_('Configuración guardada'));
+
+            // Validate mappings
+            $this->validateMappings($newConfig['template_mappings']);
+
             $this->wire('session')->redirect($this->wire('page')->url);
         }
 
@@ -55,12 +61,145 @@ class ProcessJsonLDSchemaConfig extends Process {
             $form->add($fs);
         }
 
+        // Template Mappings section
+        $form->add($this->buildTemplateMappingsFieldset($savedConfig));
+
         $submit = $modules->get('InputfieldSubmit');
         $submit->attr('name', 'submit_save');
         $submit->attr('value', $this->_('Guardar'));
         $form->add($submit);
 
         return $form;
+    }
+
+    /**
+     * Build the Template Mappings fieldset
+     */
+    protected function buildTemplateMappingsFieldset(array $savedConfig): InputfieldFieldset {
+        $modules = $this->wire('modules');
+        $templates = $this->wire('templates');
+
+        $jsonld = $modules->get('MarkupJsonLDSchema');
+        $schemas = $jsonld->getMappableKeys();
+        $mappings = $savedConfig['template_mappings'] ?? [];
+
+        $excludeTemplates = ['admin', 'form-builder', 'settings'];
+
+        $fs = $modules->get('InputfieldFieldset');
+        $fs->label = $this->_('Template Mappings');
+        $fs->description = $this->_('Associate JSON-LD schemas to templates and map their keys to template fields.');
+        $fs->icon = 'sitemap';
+        $fs->collapsed = Inputfield::collapsedYes;
+
+        foreach($templates as $template) {
+            if(in_array($template->name, $excludeTemplates)) continue;
+            if(!$template->fields->count()) continue;
+
+            $templateMapping = $mappings[$template->name] ?? [];
+
+            $tfs = $modules->get('InputfieldFieldset');
+            $tfs->label = $template->name;
+            $tfs->collapsed = empty($templateMapping) ? Inputfield::collapsedYes : Inputfield::collapsedNo;
+            $tfs->icon = 'file-text-o';
+
+            // Schema selector
+            $f = $modules->get('InputfieldAsmSelect');
+            $f->attr('name', "tm_{$template->name}_schemas");
+            $f->label = $this->_('Schemas');
+            $f->description = $this->_('Select which schemas to generate for this template.');
+            foreach(array_keys($schemas) as $schemaName) {
+                $f->addOption($schemaName, $schemaName);
+            }
+            $f->attr('value', array_keys($templateMapping));
+            $tfs->add($f);
+
+            // Field mappings per selected schema
+            $templateFields = ['_auto_' => $this->_('— Auto (schema default) —')];
+            foreach($template->fields as $field) {
+                $templateFields[$field->name] = $field->name . ' (' . $field->type->shortName . ')';
+            }
+
+            foreach($templateMapping as $schemaName => $keyMap) {
+                if(!isset($schemas[$schemaName])) continue;
+                $sfs = $modules->get('InputfieldFieldset');
+                $sfs->label = sprintf($this->_('Mapping: %s'), $schemaName);
+                $sfs->collapsed = Inputfield::collapsedNo;
+
+                foreach($schemas[$schemaName] as $key) {
+                    $sf = $modules->get('InputfieldSelect');
+                    $sf->attr('name', "tm_{$template->name}_{$schemaName}_{$key}");
+                    $sf->label = $key;
+                    $sf->addOptions($templateFields);
+                    $sf->attr('value', $keyMap[$key] ?? '_auto_');
+                    $sf->columnWidth = 33;
+                    $sfs->add($sf);
+                }
+                $tfs->add($sfs);
+            }
+
+            $fs->add($tfs);
+        }
+
+        return $fs;
+    }
+
+    /**
+     * Process template mappings from POST data
+     */
+    protected function processTemplateMappings(WireInputData $post): array
+    {
+        $modules = $this->wire('modules');
+        $templates = $this->wire('templates');
+        $jsonld = $modules->get('MarkupJsonLDSchema');
+        $schemas = $jsonld->getMappableKeys();
+        $mappings = [];
+
+        foreach($templates as $template) {
+            $selectedSchemas = $post->{"tm_{$template->name}_schemas"};
+            if(empty($selectedSchemas)) continue;
+            if(!is_array($selectedSchemas)) $selectedSchemas = [$selectedSchemas];
+
+            $mappings[$template->name] = [];
+            foreach($selectedSchemas as $schemaName) {
+                if(!isset($schemas[$schemaName])) continue;
+                $keyMap = [];
+                foreach($schemas[$schemaName] as $key) {
+                    $val = $post->{"tm_{$template->name}_{$schemaName}_{$key}"};
+                    if($val && $val !== '_auto_') {
+                        $keyMap[$key] = $val;
+                    }
+                }
+                $mappings[$template->name][$schemaName] = $keyMap;
+            }
+        }
+
+        return $mappings;
+    }
+
+    /**
+     * Validate mappings and show warnings for invalid field references
+     */
+    protected function validateMappings(array $mappings): void
+    {
+        $templates = $this->wire('templates');
+
+        foreach($mappings as $templateName => $schemaMap) {
+            $template = $templates->get($templateName);
+            if(!$template) {
+                $this->warning(sprintf($this->_('Template "%s" not found'), $templateName));
+                continue;
+            }
+            foreach($schemaMap as $schemaName => $keyMap) {
+                foreach($keyMap as $key => $fieldName) {
+                    if(!$template->fields->get($fieldName)) {
+                        $this->warning(sprintf(
+                            $this->_('Template "%s" → %s: field "%s" (mapped to key "%s") does not exist'),
+                            $templateName, $schemaName, $fieldName, $key
+                        ));
+                    }
+                }
+            }
+        }
     }
 
     protected function getFieldDefinitions(): array {
@@ -136,7 +275,7 @@ class ProcessJsonLDSchemaConfig extends Process {
                         'stripTags' => 1,
                     ],
                     'opening_hours' => [
-                        'type' => 'textarea',
+                        'type' => 'text',
                         'label' => __('Opening hours'),
                         'value' => '',
                         'stripTags' => 1,

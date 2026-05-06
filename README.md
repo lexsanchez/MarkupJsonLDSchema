@@ -2,448 +2,228 @@
 
 ## General information
 
-This module is all about arrays, either PHP or JSON-LD. JSON-LD schema arrays give your web pages a vastly improved chance of high visibility in SERPs and, at Google's whim, deliver more engaging results than simply a title, link and brief description.
+This module automatically generates JSON-LD structured data for your ProcessWire pages. It supports both automatic generation via template mappings (recommended) and manual rendering from templates.
 
-While the inherent structure of a schema is predefined, there are thousands of combinations.
+JSON-LD schemas improve your visibility in search results and enable rich snippets in Google.
 
-This module helps you dynamically create schemas from within your templates. Each schema can be configured to meet your requirements. You can even add your own ProcessWire schema classes to the module.
-
-Some useful resources for learning more about JSON-LD schemas:
-
-- https://developers.google.com/schemas/
-- http://jsonld.com
-- https://www.jamesdflynn.com/json-ld-schema-generator/
-
-There are also several informative posts in the ProcessWire forums.
+Resources:
+- https://developers.google.com/search/docs/appearance/structured-data
+- https://schema.org
+- https://search.google.com/test/rich-results
 
 ---
 
 ## Installation
 
-1. Download or clone the module into:
-
-```
-/site/modules/MarkupJsonLDSchema/
-```
-
-2. Login to ProcessWire and go to:
-
-```
-Modules → Refresh
-```
-
-3. Install **MarkupJsonLDSchema**
-
-4. Optionally install **ProcessJsonLDSchemaConfig** — this adds a **Setup → Json-LD Schema** page that allows non-superuser roles to edit the module configuration. Assign the `jsonld-schema-config` permission to any role that needs access.
-
-Configuration is optional. The configuration fields simply provide convenient defaults for organization/business schema data.
+1. Download or clone into `/site/modules/MarkupJsonLDSchema/`
+2. Go to Modules → Refresh → Install **MarkupJsonLDSchema**
+3. Optionally install **ProcessJsonLDSchemaConfig** for admin UI at Setup > Json-LD Schema
 
 ---
 
-## Usage
+## Template Mappings (v0.3.0+)
 
-### Basic usage
+The recommended way to use this module. No code required in templates.
 
-In your template:
+### How it works
+
+1. Go to **Setup > Json-LD Schema**
+2. Open the **Template Mappings** section
+3. Expand a template (e.g. `blog-post`)
+4. Select schemas to generate (e.g. `BlogPosting`, `WebPage`)
+5. Save — mapping fields will appear for each schema
+6. Map schema keys to template fields (or leave "Auto" for defaults)
+7. Save again
+
+The module automatically injects `<script type="application/ld+json">` before `</head>` on every page that has mappings configured.
+
+### Field mapping
+
+Each schema has keys that can be mapped to any field in the template:
+
+| Schema Key | Maps to | Example |
+|-----------|---------|---------|
+| `headline` | Text field | `title` |
+| `description` | Text/Textarea | `blog_summary` |
+| `image` | Image field | `image` |
+| `datePublished` | Date field | `blog_date` |
+| `articleBody` | Textarea | `body` |
+
+If a key is left as "Auto", the schema uses its built-in fallback (usually `$page->get('field1|field2|field3')`).
+
+### Backward compatibility
+
+Templates without mappings continue using the legacy system (`schemas_list` field + `_markupschema.php`). You can migrate gradually.
+
+---
+
+## Manual Usage (Legacy)
+
+You can still render schemas manually in templates:
 
 ```php
 <?php $jsonld = $modules->get('MarkupJsonLDSchema'); ?>
 
 <script type="application/ld+json">
-<?= $jsonld->render('LocalBusiness'); ?>
+<?= $jsonld->render('BlogPosting'); ?>
 </script>
 ```
 
-This will output a `LocalBusiness` schema based on the data saved in the module configuration.
-
----
-
-### Overriding schema elements
-
-A more complex example using the `$options` array:
+With options:
 
 ```php
-<?php
-$jsonld = $modules->get('MarkupJsonLDSchema');
-
 $options = [
-    'logo' => $pages->get(1)->images->first->width(200)
-];
-?>
-
-<script type="application/ld+json">
-<?php
-switch ($page->template) {
-    case 'home':
-        echo $jsonld->render('WebSite', $options);
-        echo $jsonld->render('LocalBusiness', $options);
-        break;
-
-    case 'blog-post':
-        echo $jsonld->render('Article');
-        echo $jsonld->render('BreadcrumbList');
-        break;
-
-    default:
-        echo $jsonld->render('WebPage', $options);
-        echo $jsonld->render('LocalBusiness', $options);
-        echo $jsonld->render('BreadcrumbList');
-        break;
-}
-?>
-</script>
-```
-
-Any value in the default schema may be overridden using `$options`, for example:
-
-```php
-<?php
-$jsonld = $modules->get('MarkupJsonLDSchema');
-
-$options["@type"] = "RealEstateAgent";
-?>
-
-<script type="application/ld+json">
-<?= $jsonld->render('LocalBusiness', $options); ?>
-</script>
-```
-
-This would render `"@type": "RealEstateAgent"` instead of `"LocalBusiness"`.
-
----
-
-### Custom schema elements
-
-You can extend the predefined schema arrays using the custom key in $options.
-```php
-<?php
-$jsonld = $modules->get("MarkupJsonLDSchema");
-
-$options["custom"] = [
-    "foundingDate" => "2013",
-    "areaServed" => "Worldwide",
-    "taxID" => "ABN 99 999 999 123"
-];
-?>
-
-<script type="application/ld+json">
-<?= $jsonld->render('LocalBusiness', $options); ?>
-</script>
-```
-
-The module will append these properties to the generated schema.
-
-**Notes**
-
-Custom fields must be simple text key/value pairs.
-
-Keys and values are sanitized as text before being added to the schema.
-
-Complex objects or nested structures (such as ImageObject, PostalAddress, or additional Person/Organization structures) are not supported through custom.
-
-**If you need more complex schema structures, copy the closest schema class and adapt it for your use case.**
-
----
-
-## Optional: caching schema output
-
-Schema generation is lightweight and caching is not required. However, on high‑traffic sites you may wish to cache the rendered JSON‑LD.
-
-Caching is intentionally left to the **template developer**, as caching strategy varies between projects.
-
-Example using ProcessWire's `$cache` API:
-
-```php
-<?php
-$jsonld = $modules->get("MarkupJsonLDSchema");
-
-$options = [
-    'logo' => $pages->get('template=bizinfo')->images('tags=logo')->last->width(200)
+    'headline' => 'Custom Title',
+    'image' => $page->image,
+    'datePublished' => $page->blog_date,
 ];
 
-$cacheName = "jsonld-website-" . $page->id;
-$schema = $cache->get($cacheName);
-
-if(!$schema) {
-    $schema = $jsonld->render('WebSite', $options);
-    $cache->save($cacheName, $schema, 86400); // cache for 1 day
-}
-?>
-
-<script type="application/ld+json">
-<?= $schema ?>
-</script>
-```
-
-Possible caching strategies include:
-
-- clearing cache on page save
-- caching per language
-- caching different schema types separately
-
-The module itself does not enforce caching so developers remain free to implement whatever strategy suits their project.
-
----
-
-## ProcessJsonLDSchemaConfig (Admin UI)
-
-The module includes **ProcessJsonLDSchemaConfig**, a Process module that exposes the MarkupJsonLDSchema configuration under **Setup → Json-LD Schema** in the admin.
-
-### Purpose
-
-By default, only superusers can access module configuration screens. ProcessJsonLDSchemaConfig provides a dedicated admin page with its own permission, so content editors or site managers can update organization data (name, address, phone, social links, etc.) without needing superuser access.
-
-### Files
-
-Both files live inside the main module directory:
-
-```
-site/modules/MarkupJsonLDSchema/
-├── ProcessJsonLDSchemaConfig.info.php    ← module metadata, permission, admin page
-└── ProcessJsonLDSchemaConfig.module      ← Process class with form builder
-```
-
-### Permission
-
-The module registers the permission `jsonld-schema-config`. To grant access:
-
-1. Go to **Access → Roles**
-2. Edit the desired role
-3. Check **jsonld-schema-config**
-4. Save
-
-### How it works
-
-- Reads and writes the same configuration data as MarkupJsonLDSchema (`$modules->getConfig` / `$modules->saveConfig`)
-- All fields mirror the module's config screen (organization, address, phone, social URLs, search settings, etc.)
-- Changes made from either location (Modules → Configure or Setup → Json-LD Schema) are reflected in both
-
-### Requirements
-
-- MarkupJsonLDSchema must be installed first (declared as dependency)
-
----
-
-## Schemas included in the module
-
-### Default config fields
-
-```
-address_locality
-description
-address_region
-postcode
-street_address
-organization
-logo
-telephone
-opening_hours
-latitude
-longitude
-has_map
-same_as
-search_results_page
-search_get_var
+echo $jsonld->render('Article', $options);
 ```
 
 ---
+
+## Available Schemas
 
 ### Article
 
-Outputs an `Article` schema for the current page. Defaults come from the page, including headline, publish and modified dates, description, body content, author, and URL. You can override the output with `$options` keys such as `@type`, `headline`, `description`, `articleBody`, and `image`.
+`schema.org/Article` — For general articles.
 
----
+Keys: `headline`, `description`, `image`, `articleBody`, `datePublished`, `@type`
+
+### BlogPosting *(new in v0.3.0)*
+
+`schema.org/BlogPosting` — For blog posts. Includes `isPartOf` (parent blog), keywords, word count.
+
+Keys: `headline`, `description`, `image`, `articleBody`, `blog_date`, `author_name`, `author_image`, `keywords`, `wordCount`
 
 ### BreadcrumbList
 
-Outputs a `BreadcrumbList` schema using the current page's parents. The module skips this schema on the home page. Useful for standard site navigation trails.
-
-Based on the ProcessWire forum post by AndZyk:
-
-https://processwire.com/talk/topic/13417-structured-data/
-
-Thanks also to Macrura and others who contributed.
-
----
+`schema.org/BreadcrumbList` — Auto-generated from page parents. Skipped on home page. No mapping needed.
 
 ### Custom
 
-A dummy schema with no defaults. Build the entire schema using `$options["custom"]`.
-
----
+Empty schema. Build entirely via `$options['custom']` array.
 
 ### Event
 
-Outputs an `Event` schema for the current page. Defaults come from the page and module config where appropriate, with `organizer` pointing to the configured organization. Common overrides include `name`, `url`, `description`, `start_date`, `end_date`, `location`, and `offers`.
+`schema.org/Event` — For events with dates and location.
 
----
+Keys: `name`, `description`, `start_date`, `end_date`, `location`, `offers`, `url`
 
 ### LocalBusiness
 
-Outputs a `LocalBusiness` schema using the module configuration as the primary data source. Useful for business name, address, telephone, opening hours, geo coordinates, map URL, and social profile links. Any of these values may be overridden in `$options`.
-
----
+`schema.org/LocalBusiness` — Uses module config (organization, address, phone, hours, geo).
 
 ### NewsArticle
 
-Outputs a `NewsArticle` schema for the current page. Defaults come from the page, including headline, dates, description, body, author, publisher reference, and URL. You can override the output with `$options` keys such as `@type`, `headline`, `description`, `articleBody`, and `image`.
+`schema.org/NewsArticle` — For news content.
 
----
+Keys: `headline`, `description`, `image`, `articleBody`, `datePublished`, `@type`
 
 ### Organization
 
-Outputs an `Organization` schema using the module configuration as the primary data source. Includes a canonical `@id` of `/#organization`, plus name, URL, description, logo, address, telephone, opening hours, social links, and optional geo coordinates.
-
----
+`schema.org/Organization` — Uses module config. Canonical `@id`: `/#organization`.
 
 ### Person
 
-The `Person` schema is primarily driven by the `$options` array.
+`schema.org/Person` — Driven by options. Personal fields not inherited from config.
 
-The module config may still provide shared defaults such as `organization`, though **personal contact and identity fields are not inherited automatically**. These must be explicitly passed when rendering the schema.
+Keys: `name`, `givenName`, `familyName`, `alternateName`, `description`, `url`, `email`, `telephone`, `jobTitle`, `image`, `worksFor`, `same_as`
 
-If you pass `worksFor` as an array, it should follow an `Organization`-like structure. The schema supports nested values such as `@id`, `url`, and `sameAs`.
+### Product *(new in v0.3.0)*
 
-#### Important
+`schema.org/Product` — Enhanced with offers, pricing, SKU, availability.
 
-The following fields are **only included when explicitly provided in `$options`**:
-
-- `email`
-- `telephone`
-- `same_as`
-- `street_address`
-- `address_locality`
-- `address_region`
-- `postcode`
-- `address_country`
-- `image`
-- `logo`
-
-This prevents business-level defaults such as company phone, address, or social links from being incorrectly applied to a person.
-
-Address fields are optional and processed individually. Only the values provided will be included in the final `PostalAddress`.
-
----
-
-### Example
-
-```php
-<?php
-$jsonld = $modules->get('MarkupJsonLDSchema');
-
-$options = [
-    'name' => 'Jane Doe',
-    'jobTitle' => 'Founder',
-    'email' => 'jane@example.com',
-    'same_as' => [
-        'https://www.linkedin.com/in/janedoe/',
-        'https://github.com/janedoe',
-    ],
-    'address_locality' => 'Sydney',
-    'address_region' => 'NSW',
-
-    'worksFor' => [
-        '@type' => 'Organization',
-        '@id' => 'https://example.com/#organization',
-        'name' => 'Acme Studio',
-        'url' => 'https://example.com',
-        'sameAs' => [
-            'https://linkedin.com/company/acme',
-            'https://github.com/acme',
-        ],
-    ],
-    'description' => 'Founder of Acme Studio and specialist in ...',
-    'url' => $page->httpUrl,
-];
-?>
-
-<script type="application/ld+json">
-<?= $jsonld->render('Person', $options); ?>
-</script>
-```
-
-### Product
-
-Outputs a `Product` schema for the current page. Defaults come from page fields for brand, name, and description, while the publisher points to the configured organization. Optional overrides include `brand`, `name`, `description`, `image`, `rating_value`, `review_count`, `offers`, `price`, and `priceCurrency`.
-
-`offers` may be a single `Offer` array or a list of `Offer` arrays. Common supported offer keys are `@type`, `url`, `price`, `priceCurrency`, `availability`, `itemCondition`, `priceValidUntil`, and `seller`. For simple products, passing `price` and optional `priceCurrency` creates one `Offer` using the current page URL.
-
----
+Keys: `name`, `description`, `image`, `brand`, `sku`, `price`, `currency`, `availability`, `condition`, `rating_value`, `review_count`, `url`
 
 ### WebPage
 
-Outputs a `WebPage` schema for the current page.
+`schema.org/WebPage` — Generic page schema with optional SearchAction.
 
-| Key | Default |
-|----|----|
-| @type | WebPage |
-| url | `$page->httpUrl` or flat URL from `page_url` |
-| name | `$page->get('seo_title|title|headline')` |
-| description | `$page->get('seo_description|summary|blog-summary')` |
-| image | supplied via `$options["image"]` |
-| potentialAction | SearchAction if search page config is present |
-
----
+Keys: `name`, `description`, `image`, `@type`
 
 ### WebSite
 
-Outputs a `WebSite` schema for the site home page. Defaults come from the home page and module config, including name, description, logo, publisher reference, and optional `SearchAction` using `search_results_page` and `search_get_var`.
+`schema.org/WebSite` — Site-level schema with SearchAction.
+
+Keys: `name`, `description`, `@type`
 
 ---
 
-## Creating your own schema classes
+## Creating Custom Schemas
 
-Developers can add new schema types.
+Add a file in `schemas/` following this convention:
 
-Requirements:
-
-**Location**
-
-```
-/site/modules/MarkupJsonLDSchema/schemas/
-```
-
-**File naming convention**
-
-```
-jsonld.SchemaName.php
-```
-
-Example:
-
-```
-jsonld.FAQPage.php
-```
-
-**Class naming convention**
-
-```
-ProcessWire\JsonLDSchemaName
-```
-
-Example:
+**File:** `schemas/jsonld.FAQPage.php`
 
 ```php
 <?php namespace ProcessWire;
 
-class JsonLDFAQPage {
-
-    public static function getSchema(array $data = null, Page $page = null) {
-
+class JsonLDFAQPage extends WireData {
+    public static function getSchema(?array $data = null, ?Page $page = null): array {
+        $page ??= wire('page');
         return [
-            "@context" => "https://schema.org",
-            "@type" => "FAQPage"
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'name' => $page->title,
         ];
-
     }
-
 }
 ```
 
-Once created, it can be rendered normally:
+Then render with `$jsonld->render('FAQPage')` or select it in Template Mappings.
+
+The module auto-detects keys by scanning `$data['key']` references in your schema file.
+
+---
+
+## Module Configuration
+
+Global settings at Setup > Json-LD Schema:
+
+| Field | Description |
+|-------|-------------|
+| Organization | Business name |
+| Logo | Logo URL |
+| Street / City / State / Postcode / Country | Address |
+| Description | Business description |
+| Contact Info | ContactPoint JSON |
+| Phone | Telephone |
+| Opening Hours | Business hours |
+| Latitude / Longitude | Geo coordinates |
+| Google Map URL | hasMap |
+| Social Media URLs | sameAs (one per line) |
+| Search Results Page | For SearchAction |
+| Search GET Variable | For SearchAction |
+
+---
+
+## API
+
+### `$jsonld->render($schemaName, $options, $page)`
+
+Renders a schema as JSON string.
+
+- `$schemaName` — Schema class name (e.g. `'BlogPosting'`)
+- `$options` — Array of overrides (optional)
+- `$page` — Page context (optional, defaults to current page)
+
+### `$jsonld->getMappableKeys($schemaName = null)`
+
+Returns mappable keys for all schemas (or a specific one).
 
 ```php
-echo $jsonld->render('FAQPage');
+$keys = $jsonld->getMappableKeys();
+// ['Article' => ['headline', 'description', 'image', ...], ...]
+
+$keys = $jsonld->getMappableKeys('BlogPosting');
+// ['BlogPosting' => ['headline', 'description', 'image', 'blog_date', ...]]
 ```
 
 ---
+
+## Requirements
+
+- ProcessWire 3.0.110+
+- PHP 7.2+

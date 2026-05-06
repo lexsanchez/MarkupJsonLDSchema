@@ -44,7 +44,7 @@ class JsonLDNewsArticle extends WireData {
             $out["url"]              = $pageURL;
                 
             
-            $out["datePublished"]   = date('c', $page->created);
+            $out["datePublished"]   = !empty($data['datePublished']) ? date('c', is_numeric($data['datePublished']) ? (int)$data['datePublished'] : strtotime($data['datePublished'])) : date('c', $page->created);
             $out["dateModified"]    = date('c', $page->modified);
             $out["author"]          = array(
                 "@type" => "Person",

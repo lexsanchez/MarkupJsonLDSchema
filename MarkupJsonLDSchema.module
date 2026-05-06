@@ -62,8 +62,9 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
         parent::__construct();
         self::$defaults = wire('modules')->getConfig($this->className);
     }
-        
-    public function __init() {
+
+    public function init() {
+        $this->addHookAfter('Page::render', $this, 'hookPageRender');
     }
 
     public function install() {
@@ -75,12 +76,101 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
     }
 
     public function ___ready() {
+    }
 
+    /**
+     * Hook: inject JSON-LD scripts before </head> based on template mappings
+     */
+    public function hookPageRender(HookEvent $event)
+    {
+        $page = $event->object;
+        $html = $event->return;
+        if(!$html || strpos($html, '</head>') === false) return;
+
+        $config = $this->wire('modules')->getConfig($this->className);
+        $mappings = $config['template_mappings'] ?? [];
+
+        if(!isset($mappings[$page->template->name])) return;
+
+        $wSettings = $this->wire('pages')->get('template=settings');
+        $globalOptions = [];
+        if($wSettings && $wSettings->id && $wSettings->page_logo) {
+            $globalOptions['logo'] = $wSettings->page_logo;
+        }
+
+        $scripts = '';
+        foreach($mappings[$page->template->name] as $schemaName => $keyMap) {
+            $options = $globalOptions;
+            foreach($keyMap as $schemaKey => $fieldName) {
+                if(!$page->hasField($fieldName)) continue;
+                $val = $page->get($fieldName);
+                if($val === null || $val === '') continue;
+                $options[$schemaKey] = $val;
+            }
+
+            try {
+                $json = $this->render($schemaName, $options, $page);
+                if($json) {
+                    $scripts .= '<script type="application/ld+json">' . $json . '</script>' . "\n";
+                }
+            } catch(\Exception $e) {
+                $this->log("Schema error ({$schemaName} on {$page->url}): " . $e->getMessage());
+            }
+        }
+
+        if($scripts) {
+            $event->return = str_replace('</head>', $scripts . '</head>', $html);
+        }
     }
 
     #---------------------
     # Module functions
     #---------------------   
+
+/*    public function ___render($name = null, ?array $options = null, ?Page $page = null): string {
+
+        $options = is_array($options) ? $options : [];
+        $data = array_merge(self::$defaults, wire('modules')->getConfig($this), $options);
+
+        if(is_null($page)) $page = wire('page');
+
+        // $name is the class name
+        if(is_null($name)) return "No schema name given";
+
+        $sanitizer = wire('sanitizer');
+
+        // Dont confuse things by trying to put a BreadcrumbList schema on the home page
+        if($name === 'BreadcrumbList' && $page->id === 1) {
+            return '';
+        }
+
+        $className = 'JsonLD' . $sanitizer->text($name);
+        $schemaClass = $this->loadSchemaClass($className);
+
+        if(!$schemaClass) {
+            throw new WireException("Class {$className} could not be loaded");
+        }
+
+        if(!method_exists($schemaClass, 'getSchema')) {
+            $this->error("Schema class {$className} does not implement getSchema()", Notice::log);
+            throw new WireException("Class {$className} is invalid");
+        }
+
+        // Get the data array as per the class schema
+        $result = $schemaClass->getSchema($data, $page);
+        if(!is_array($result)) {
+            throw new WireException("Class {$className} did not return a schema array");
+        }
+
+        // Add custom arrays to the default schema data array and move it up one level to remove $data['custom']
+        if(!empty($data['custom']) && is_array($data['custom'])) {
+            foreach($data['custom'] as $key => $value) {
+                $result[$sanitizer->text($key)] = $value; // don't want to convert arrays to text
+            }
+        }
+
+        return json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }*/
 
     public function ___render($name = null, ?array $options = null, ?Page $page = null): string
     {
@@ -135,13 +225,7 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
             }
         }
 
-        if(!empty($data['openingHours']) && is_array($data['openingHours'])) {
-
-
-        }
-
         $result = $this->normalizeSchemaResult($result);
-        $result = $this->decodeSchemaStrings($result);
 
         return json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
@@ -155,7 +239,7 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
 
             foreach($value as $key => $item) {
                 if(is_int($key)) {
-                    $cleanItem = $this->sanitizeCustomValue($item) ;
+                    $cleanItem = $this->sanitizeCustomValue($item);
                     if($cleanItem !== null && $cleanItem !== '' && $cleanItem !== []) {
                         $out[] = $cleanItem;
                     }
@@ -163,7 +247,7 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
                     $cleanKey = trim((string) $key);
                     if($cleanKey === '') continue;
 
-                    $cleanItem = $this->sanitizeCustomValue($item) ;
+                    $cleanItem = $this->sanitizeCustomValue($item);
                     if($cleanItem !== null && $cleanItem !== '' && $cleanItem !== []) {
                         $out[$cleanKey] = $cleanItem;
                     }
@@ -179,27 +263,6 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
         }
 
         return null;
-    }
-
-    protected function decodeSchemaStrings(mixed $value, ?string $key = null): mixed
-    {
-        // Skip decoding for @keys and url
-        if($key !== null && ($key === 'url' || str_starts_with($key, '@'))) {
-            return $value;
-        }
-
-        if(is_array($value)) {
-            foreach($value as $k => $item) {
-                $value[$k] = $this->decodeSchemaStrings($item, is_string($k) ? $k : null);
-            }
-            return $value;
-        }
-
-        if(is_string($value)) {
-            return trim(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        }
-
-        return $value;
     }
 
     protected function limitPersonInheritedFields(array &$data, array $options): void
@@ -292,4 +355,35 @@ class MarkupJsonLDSchema extends WireData implements Module, ConfigurableModule 
     # Helpers
     #---------------------  
 
+    /**
+     * Get mappable keys for all schemas (or a specific one)
+     * Reads each schema file and extracts $data['key'] references via regex.
+     *
+     * @param string|null $schemaName Specific schema name, or null for all
+     * @return array ['Article' => ['headline', 'description', ...], ...]
+     */
+    public function getMappableKeys(?string $schemaName = null): array
+    {
+        $excludeSchemas = ['BreadcrumbList', 'Custom', 'Organization'];
+        $excludeKeys = ['@context', '@type', '@id', 'page_url', 'custom'];
+        $schemasDir = __DIR__ . '/schemas/';
+        $result = [];
+
+        $files = glob($schemasDir . 'jsonld.*.php');
+        foreach ($files as $file) {
+            $name = preg_replace('/^jsonld\.(.+)\.php$/', '$1', basename($file));
+            if (in_array($name, $excludeSchemas)) continue;
+            if ($schemaName !== null && $name !== $schemaName) continue;
+
+            $code = file_get_contents($file);
+            preg_match_all('/\$data\[[\'"]([\w@]+)[\'"]\]/', $code, $matches);
+            $keys = array_unique($matches[1]);
+            $keys = array_values(array_diff($keys, $excludeKeys));
+            sort($keys);
+            $result[$name] = $keys;
+        }
+
+        ksort($result);
+        return $result;
+    }
 }

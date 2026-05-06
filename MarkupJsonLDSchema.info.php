@@ -2,10 +2,10 @@
 
 $info = [
     'title' => "Json-LD Schema",
-    'version' => "0.1.7",
-    'summary' => "This module automatically generates semantically correct JSON-LD Schemas for your Processwire web pages for improved Search Engine results.",
-    'author' => "Clip Magic",
-    'href' => "http://www.clipmagic.com.au",
-    'autoload' => false,
+    'version' => "0.3.0",
+    'summary' => "Automatically generates JSON-LD Schemas for ProcessWire pages based on template mappings.",
+    'author' => "Lex Sanchez",
+    'href' => "http://www.lexsanchez.com/",
+    'autoload' => true,
     'singular' => true
 ];
